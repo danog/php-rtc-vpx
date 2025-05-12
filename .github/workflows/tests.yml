@@ -1,0 +1,80 @@
+name: VPX TESTS
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP 8.4 with FFI
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          extensions: ffi
+          ini-values: ffi.enable=true
+          tools: composer:v2
+
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
+
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Build and install libvpx v1.15.0
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            build-essential \
+            pkg-config \
+            yasm \
+            cmake \
+            git \
+            curl \
+            autoconf \
+            automake \
+            libtool
+
+          # Build and install libvpx
+          mkdir -p ~/vpx_sources
+          cd ~/vpx_sources
+          curl -LO https://github.com/webmproject/libvpx/archive/refs/tags/v1.15.0.tar.gz
+          tar xzvf v1.15.0.tar.gz
+          cd libvpx-1.15.0
+
+          ./configure --prefix=/usr/local --enable-shared --disable-examples
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+          pkg-config --modversion vpx || echo "libvpx not found"
+
+      - name: Check PHP and FFI status
+        run: |
+          php -v
+          php -r "echo 'FFI enabled: ' . (extension_loaded('ffi') ? 'yes' : 'no') . PHP_EOL;"
+
+      - name: Run PHPUnit tests
+        run: vendor/bin/phpunit
