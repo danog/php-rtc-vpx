@@ -1,7 +1,7 @@
 {
-    "name": "quasarstream/vpx",
+    "name": "danog/php-rtc-vpx",
     "type": "library",
-    "description": "A PHP wrapper around the libvpx codec using FFI, providing tools for encoding and decoding VP8/VP9 video streams for WebRTC applications.",
+    "description": "A PHP wrapper around the libvpx codec using FFI, providing tools for encoding and decoding VP8/VP9 video streams for WebRTC applications. Fork with FFI made optional and a pure-PHP DTLS/SRTP stack, maintained for MadelineProto.",
     "keywords": [
         "libvpx",
         "vpx"
@@ -55,5 +55,8 @@
     "minimum-stability": "dev",
     "suggest": {
         "ext-ffi": "Install the FFI extension and libvpx to encode or decode VP8; not required to packetize already-encoded VP8"
+    },
+    "replace": {
+        "quasarstream/vpx": "self.version"
     }
 }
