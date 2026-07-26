@@ -35,6 +35,29 @@ class Vpx
     private const HEADER_FILE_PATH = __DIR__ . "/libvpx/include/vpx.h";
 
     /**
+     * Report whether libvpx can actually be loaded.
+     *
+     * The codec is only needed to encode or decode VP8; already-encoded media is packetized without FFI,
+     * so callers use this to decide whether transcoding is on the table.
+     *
+     * @return bool True when libvpx loads and reports a supported version.
+     */
+    public static function isAvailable(): bool
+    {
+        if (!extension_loaded('FFI')) {
+            return false;
+        }
+
+        try {
+            self::init();
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Initializes the VPX library and returns an FFI instance.
      *
      * @throws VpxException if the VPX library initialization fails.
@@ -46,21 +69,26 @@ class Vpx
         if (!isset($libVpx)) {
             try {
                 $lib = getenv("LIBVPX_PATH") ?: self::getLibPath();
-                $libVpx = FFI::cdef(file_get_contents(self::HEADER_FILE_PATH), $lib);
+                // Bind into a local first. A library that fails the check below must not be left
+                // behind in the global, or the next init() call would see it already set, skip the
+                // check and hand out a binding whose struct layouts do not match the loaded ABI.
+                $binding = FFI::cdef(file_get_contents(self::HEADER_FILE_PATH), $lib);
 
-                if (!$libVpx) {
+                if (!$binding) {
                     throw new VpxException("FFI failed to load VPX shared library.");
                 }
 
                 // Verify the library version
-                $version = $libVpx->vpx_codec_version();
-                if ($version === self::SUPPORTED_VERSION) {
+                $version = $binding->vpx_codec_version();
+                if ($version < self::SUPPORTED_VERSION) {
                     throw new VpxException(sprintf(
                         "The library could not be initialized. Required version is %d or higher, detected version is %d.",
                         self::SUPPORTED_VERSION,
                         $version
                     ));
                 }
+
+                $libVpx = $binding;
 
                 self::setDefinition();
 
