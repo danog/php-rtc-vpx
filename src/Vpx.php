@@ -27,12 +27,12 @@ class Vpx
     /**
      * Required minimum supported VPX codec version.
      */
-    private const int SUPPORTED_VERSION = 69375;
+    private const SUPPORTED_VERSION = 69375;
 
     /**
      * The path to the VPX C header file.
      */
-    private const string HEADER_FILE_PATH = __DIR__ . "/libvpx/include/vpx.h";
+    private const HEADER_FILE_PATH = __DIR__ . "/libvpx/include/vpx.h";
 
     /**
      * Initializes the VPX library and returns an FFI instance.
